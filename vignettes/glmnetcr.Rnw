@@ -1,0 +1,171 @@
+% -*- mode: noweb; noweb-default-code-mode: R-mode; -*-
+% \VignetteIndexEntry{glmnetcr: An R Package for Ordinal Response Prediction in High-Dimensional Data Settings} 
+% \VignetteDepends{glmnet, glmnetcr} 
+% \VignetteKeyword{models}
+\documentclass[article, shortclass, nojss]{jss}
+\usepackage{amsmath, graphicx}
+\title{\pkg{glmnetcr}: An \proglang{R} Package for Ordinal Response Prediction in High-Dimensional Data Settings}
+\author{Kellie J. Archer\\The Ohio State University}
+\newcommand{\bet}{\mbox{\boldmath $\beta$}}
+
+\Plainauthor{Kellie J. Archer}
+\Plaintitle{glmnetcr: An R Package for Ordinal Response Prediction in High-Dimensional Data Settings}
+\Shorttitle{An \proglang{R} Package for Penalized Ordinal Response Models}
+
+\Abstract{This paper describes an \proglang{R} package, \pkg{glmnetcr}, that provides a function for fitting a penalized continuation ratio model when interest lies in predicting an ordinal response. The function, \code{glmnetcr} uses the coordinate descent fitting algorithm as implemented in the \pkg{glmnet} package and described by \citep{Friedman}. Methods for extracting all estimated coefficients, extracting non-zero coefficient estimates, obtaining the predicted class, and obtaining the class-specific fitted probabilities have been implemented. Additionally, generic methods from \pkg{glmnet} including \code{print} and \code{plot} can be applied to a \code{glmnetcr} object. }
+\Keywords{ordinal response, penalized models, LASSO, L$_1$ constraint, \proglang{R}}
+\Plainkeywords{ordinal response, penalized models, LASSO, L1 constraint, R}
+
+\Address{
+Kellie J. Archer\\
+Division of Biostatistics\\
+College of Public Health\\
+The Ohio State University\\
+1841 Neil Ave\\
+Columbus, OH 43210\\
+E-mail: \email{archer.43@osu.edu}\\
+URL: \url{https://cph.osu.edu/people/karcher}
+}
+\SweaveOpts{echo=FALSE}
+\usepackage{a4wide}
+
+\begin{document}
+
+%\maketitle
+\section{Introduction}
+High-throughput genomic experiments are frequently conducted for the purpose of examining whether genes are predictive of or significantly associated with phenotype. In many biomedical settings where histopathological or health status data are collected, phenotypic variables are recorded on an ordinal scale.  Nevertheless, most often investigators neglect the ordinality of the phenotypic data and rather dichotomize the ordinal class than apply statistical methods suitable for two-class comparisons and predictions. This tendency to analyze ordinal data using dichotomous class methodologies may be due to the lack of available statistical methods and software for modeling an ordinal response in the presence of a high-dimensional covariate space. The approach of collapsing ordinal categories may neglect important information in the study  \citep{Armstrong}.
+
+A variety of statistical modeling procedures, namely, proportional odds, adjacent category, stereotype logit, and continuation ratio models can be used to predict an ordinal response. In this paper, we focus attention to the continuation ratio model because its likelihood can be easily re-expressed such that existing software can be readily adapted and used for model fitting. Suppose for each observation, $i=1,\ldots,n$, the response $Y_i$ belongs to one ordinal class $k=1,\ldots,K$ and $\mathbf{x}_i$ represents a $p$-length vector of covariates. The backward formulation of the continuation ratio models the logit as
+\begin{equation}
+\texttt{logit}\left(P(Y=k|Y\le k,\mathbf{X}= \mathbf{x})\right)=\alpha_k+\bet_k^\top\mathbf{x}
+\end{equation}
+whereas the forward formulation models the logit as
+\begin{equation}
+\texttt{logit}\left(P(Y=k|Y\ge k,\mathbf{X}= \mathbf{x})\right)=\alpha_k+\bet_k^\top\mathbf{x}.
+\end{equation}
+Rather than describe both formulations in detail, here we present the backward formulation, which is commonly used when progression through disease states from none, mild, moderate, severe is represented by increasing integer values, and interest lies in estimating the odds of more severe disease compared to less severe disease \citep{Bender}. Therefore for $i=1,\ldots,n$ we can construct a vector $\mathbf{y}_i$ from $Y_i$ to represent ordinal class membership, such that $\mathbf{y}_i=(y_{i1}, y_{i2},\ldots, y_{iK})^\top$, where $y_{ik}=1$ if the response is in category $k$ and 0 otherwise, so that  $n_i=\sum_{k=1}^Ky_{ik}=1$. Using the logit link, Equation~\ref{condprob} represents the conditional probability for class $k$ 
+\begin{equation}
+\delta_k(\mathbf{x})=P(Y = k |Y \le k, \mathbf{X}= \mathbf{x})=\frac{\exp(\alpha_k+\bet_k^\top\mathbf{x})}{1+\exp(\alpha_k+\bet_k^\top\mathbf{x})}.\label{condprob}
+\end{equation}
+The likelihood for the continuation ratio model is then the product of conditionally independent binomial terms \citep{Cox}, which is given by
+\begin{equation}
+L(\bet|\mathbf{y},\mathbf{x})=\prod_{i=1}^n\delta_2^{y_{i2}}(1-\delta_2)^{1-\sum_{k=2}^Ky_{ik}}\times\cdots\times\delta_{K}^{y_{iK}}(1-\delta_{K})^{1-y_{iK}}\label{crlikelihood}
+\end{equation}
+where here we have simplified our notation by not explicitly including the dependence of the conditional probability $\delta_k$ on $\mathbf{x}$. Further, simplifying our notation to let $\bet$ represent the vector containing both the thresholds $(\alpha_2,\ldots,\alpha_{K})$ and the log odds $(\beta_1,\ldots,\beta_p)$ for all $K-1$ logits, the full parameter vector is
+\begin{equation}
+\bet=(\alpha_2,\beta_{21},\beta_{22},\ldots,\beta_{2p},\ldots,\alpha_{K},\beta_{K,1},\beta_{K,2},\ldots,\beta_{K,p})^\top
+\end{equation}
+which is of length $(K-1)(p+1)$. As can be seen from Equation~\ref{crlikelihood}, the likelihood can be factored into $K-1$ independent likelihoods, so that maximization of the independent likelihoods will lead to an overall maximum likelihood estimate for all terms in the model \citep{Bender}. A model consisting of $K-1$ different $\bet$ vectors may be overparameterized so to simplify, one commonly fits a constrained continuation model, which includes the $K-1$ thresholds $(\alpha_2,\ldots,\alpha_{K})$ and one common set of $p$ slope parameters, $(\beta_1,\ldots,\beta_p)$. To fit a constrained continuation ratio model, the original dataset can be restructured by forming $K-1$ subsets, where for classes $k=2,\ldots,K$, the subset contains those observations in the original dataset up to class $k$. Additionally, for the $k^{th}$ subset, the outcome is dichotomized as $y=1$ if the ordinal class is $k$ and $y=0$ otherwise. Furthermore, an indicator is constructed for each subset representing subset membership. Thereafter the $K-1$ subsets are appended to form the restructured dataset, which represents the $K-1$ conditionally independent datasets in Equation~\ref{crlikelihood}. Applying a logistic regression model to this restructured dataset yields an L$_1$ constrained continuation ratio model.
+
+\section{Penalized models}
+For datasets where the number of covariates $p$ exceeds the sample size $n$, the backwards stepwise procedure cannot be undertaken. Furthermore, for any problem using a forward selection procedure the discrete variable inclusion process can exhibit high variance. Moreover, for high-dimensional covariate spaces, the best subset procedure is computationally prohibitive.  Two penalized methods, ridge and L$_1$ penalization, places a penalty on a function of the coefficient estimates, thereby permitting a model fit even for high-dimensional data \cite{Tibs1996, Tibs1997}. A generalization of these penalized models can be expressed as,
+\begin{equation}
+\tilde{\beta}=\arg \min_\beta(\sum_{i=1}^n(y_i-\beta_0-\sum_{j=1}^px_{ij}\beta_j)^2+\lambda\sum_{j=1}^p|\beta_j|^q)
+\end{equation}
+for $q\ge0$. When $q=1$ we have the an L$_1$ penalized model, when $q=2$ we have ridge regression. Values of $q\in (1,2)$ provide a compromise between the L$_1$ and ridge penalized models. Because when $q>1$ coefficients are no longer set exactly equal to 0, the elastic net penalty was introduced
+\begin{equation}
+\lambda\sum_{j=1}^p(\alpha\beta_j^2+(1-\alpha)|\beta_j|).
+\end{equation} 
+
+\section{Implementation}
+The \pkg{glmnetcr} package was written in the \proglang{R} programming environment \citep{RTeam} and depends on the \pkg{glmnet} package \citep{Park}.  Similar to the \pkg{Design} package which includes a function \code{cr.setup} for restructuring a dataset for fitting a forward continuation ratio model, in this package the model is fit by restructuring the dataset then passing the restructured dataset to a penalized logistic regression fitting function. However, unlike \code{cr.setup} which produces an object of class \code{list} from which the response and restructured independent variables are extracted and passed to a model fitting algorithm, in the \pkg{glmnetcr} package the restructuring functions are transparent to the user. Specifically, the \pkg{glmnetcr} package fits either a forward or backward (default) penalized constrained continuation ratio model by specification of \code{method="forward"} in the \code{glmnetcr} call.   The \code{glmnetcr} function restructures the dataset to represent the $K-1$ conditionally independent likelihoods and then fits the penalized continuation ratio model using the \pkg{glmnet} framework.  This allows fitting a penalized model for situations where the number of covariates $p$ exceed the sample size $n$.  In addition, methods for extracting the best fitting model from the path using AIC and BIC criteria, obtaining predicted class and fitted class probabilities, and returning coefficient estimates were written in addition to adapting the \code{print} and \code{plot} methods from \pkg{glmnet} for a \code{glmnetcr} object.
+
+\section{Example}
+The \pkg{glmnetcr} package includes a filtered microarray dataset \code{diabetes} in which asymptomatic males not previously diagnosed with Type II diabetes were enrolled and subsequently were cross-classified as either normal controls ($N=8$), having impaired fasting glucose ($N=7$), or as Type II diabetics ($N=9$) based on a fasting glucose intolerance test. From the code below we can see that the classification variable is stored  as \code{y} in the first column of the \code{diabetes} \code{data.frame}; all subsequent columns are the 11,066 Illumina probes having no negative expression values. In fitting the model we can extract the covariates into an object \code{x} and the ordinal outcome into the object \code{y}. The code for fitting a backward (default) continuation ratio model is given by
+<<echo=FALSE>>=
+old<-options()
+options(prompt="R> ", continue="+  ", width=70, useFancyQuotes=FALSE)
+@
+<<echo=TRUE>>=
+library("glmnetcr")
+data("diabetes")
+dim(diabetes)
+names(diabetes)[1:10]
+summary(diabetes$y)
+x <- diabetes[, 2:dim(diabetes)[2]]
+y <- diabetes$y
+fit <- glmnetcr(x, y)
+@
+Notice that because the three classes are completely separated after including a few covariates, a warning was issued because larger models could not be fit. Nevertheless, all models before the convergence issue arose can be extracted from the resulting object. As with \code{glmnet} model objects, methods such as \code{print} and \code{plot} can be applied to \code{glmnetcr} model objects, which are helpful for selecting the step at which to select the final model from the solution path. For example, Figure~\ref{BIC} can be used to identify a more parsimonious model having a BIC close to the minimum BIC. Figure~\ref{Coefficients} can be used to identify the path of coefficient estimates.
+<<echo=TRUE>>=
+print(fit)
+@
+\begin{figure}[htbp]\label{BIC}
+  \begin{center}
+<<fig=TRUE>>=
+plot(fit, xvar = "step", type = "bic")
+@
+    \caption{Plot of Bayesian Information Criteria across the regularization path for the fitted \code{glmnetcr} object using the \code{diabetes} data.}
+    \label{BIC}
+  \end{center}
+\end{figure}
+\begin{figure}[htbp]\label{Coefficients}
+  \begin{center}
+<<fig=TRUE>>=
+plot(fit, xvar = "step", type = "coefficients")
+@
+    \caption{Plot of estimated coefficients across the regularization path for the fitted \code{glmnetcr} object using the \code{diabetes} data.}
+ \label{Coefficients}
+  \end{center}
+\end{figure}
+
+<<echo=TRUE>>=
+plot(fit, xvar = "step", type = "bic")
+plot(fit, xvar = "step", type = "coefficients")
+@
+
+Note that when plotting, the horizontal axis can be \code{"norm"}, \code{"lambda"}, or \code{"step"}, however extractor functions for \code{glmnetcr} generally require the step to be selected, so we have selected \code{xvar = "step"} in this example. The vertical axis can be \code{"coefficients"}, \code{"aic"}, or \code{"bic"}. As one can see, there is a multitude of models fit from one call to \code{glmnetcr}. To faciliate extraction of best fitting models using commonly used criterion, the \code{select.glmnetcr} function can be used. The \code{select.glmnetcr} function extracts the best fitting model from the solution path, where the \code{which} parameter allows one to select either AIC or by default, BIC.
+<<echo=TRUE>>=
+BIC.step <- select.glmnetcr(fit)
+BIC.step
+AIC.step <- select.glmnetcr(fit, which = "AIC")
+AIC.step
+@
+In this example, Step 23 (\code{s23}) corresponds to the model attaining the minimum BIC. The \code{coef} function returns all estimated coefficients for a \code{glmnetcr} fitted model, including the intercept which is returned as \code{a0} as well as the estimated slope and threshold estimates stored in \code{beta}. The coefficient estimates are returned for a specific step of the regularization path by specifying the step number, \code{s}, to extract. The \code{nonzero.glmnetcr} function returns only those non-zero coefficient estimates for a selected model. This latter function is useful when the number of predictor variables is large.
+<<echo=TRUE>>=
+coefficients<-coef(fit, s = BIC.step)
+coefficients$a0
+sum(coefficients$beta != 0)
+nonzero.glmnetcr(fit, s = BIC.step)
+@
+
+A forward continuation ratio model can be fit using the syntax
+<<echo=TRUE>>=
+fit <- glmnetcr(x, y, method = "forward")
+@
+Again, the \code{select.glmnetcr} function extracts the best fitting model from the solution path, where the \code{which} parameter allows one to select either AIC or by default, BIC.
+<<echo=TRUE>>=
+BIC.step <- select.glmnetcr(fit)
+BIC.step
+@
+
+As before, the parameter estimates corresponding to the model attaining the minimum BIC can be extracted using the following code. 
+<<echo=TRUE>>=
+coefficients<-coef(fit, s = BIC.step)
+coefficients$a0
+sum(coefficients$beta != 0)
+nonzero.glmnetcr(fit, s = BIC.step)
+@
+Note that the \code{glmnetcr} function fits a penalized constrained continuation ratio model; therefore for $K$ classes, there will be $K-1$ intercepts representing the cutpoints between adjacent classes. In this package, the nomenclature for these cutpoints is to use \lq\lq cp\textit{k}\rq\rq\ where $k=1,\ldots,K-1$. In this dataset, $K=3$ so the intercepts are \code{cp1} and \code{cp2} with \code{a0} being an offset. When using the BIC to select the final forward continuation ratio model, the only probe having a non-zero coefficient estimate  \code{ILMN_1759232} which corresponds to the insulin receptor substrate 1 (IRS1) gene which is biologically meaningful.
+
+Continuation ratio models predicts conditional probabilities so a new method to extract the fitted probabilities and predicted class was created. The \code{predict} returns the AIC, BIC, predicted class, and the fitted probabilities for the $K$ classes for all steps along the regularization path. By default the training data is used to obtain model predictions, though predicted class and fitted probabilities can be obtained for a test dataset by specifying a different dataset using the  \code{newx} parameter. The \code{fitted} function extracts the AIC, BIC, predicted class, and the fitted probabilities for the $K$ classes for a specific step of the regularization path by specifying the parameter \code{s}. 
+<<echo=TRUE>>=
+hat<-fitted(fit, s = BIC.step)
+names(hat)
+table(hat$class, y)
+@
+
+
+\section{Summary}
+Herein we have described the \pkg{glmnetcr} package which works in conjunction with the \pkg{glmnet} package in the \proglang{R} programming environment.  The package provides methods for fitting either a forward or backward penalized continuation ratio model. Moreover, the likelihood-based penalized constrained continuation ratios models have been demonstrated to have good performance in simulation studies and when applied to microarray gene expression datasets \citep{Archer}, as well as in comparison to penalized Bayesian continuation ratio models using their encoded sparsity priors \citep{Kiiveri}. A similar package, \pkg{glmpathcr}, which uses the \pkg{glmpath} fitting algorithm for fitting a penalized constrained continuation ratio model has also been developed and is available for download from the Comprehensive \proglang{R} Archive Network. Functions for extracting coefficients, extracting non-zero coefficients, and obtaining fitted probabilities and predicted class in the \pkg{glmpathcr} package follow those in \pkg{glmnetcr} and both packages have similar performance \citep{Archer}. Therefore either the \pkg{glmpathcr} or \pkg{glmnetcr} package should be helpful when predicting an ordinal response for datasets where the number of covariates exceeds the number of available samples. 
+<<echo=FALSE>>=
+options(old)
+@
+\section{Acknowledgments}
+This research was supported by the National Institute of Library Medicine through R03LM009347 and R01LM011169.
+
+\bibliography{glmnetRefs}
+
+\end{document}
+
+

@@ -1,0 +1,10 @@
+export(coef.glmnetcr, cr.backward, cr.forward, nonzero.glmnetcr, fitted.glmnetcr, glmnetcr, select.glmnetcr, plot.glmnetcr, predict.glmnetcr, print.glmnetcr)
+importFrom("graphics", "abline", "axis", "matplot", "plot", "title")
+importFrom("stats", "predict", "sd")
+importFrom("glmnet", "glmnet")
+S3method(print, glmnetcr)
+S3method(plot, glmnetcr)
+S3method(fitted, glmnetcr)
+S3method(predict, glmnetcr)
+S3method(coef, glmnetcr)
+
