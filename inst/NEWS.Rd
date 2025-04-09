@@ -24,3 +24,8 @@
    \item Changed glmnetcr function to include the default of exclude = NULL which had not been previously implemented.
 }
 }
+\section{Changes in version 1.0.7}{
+\itemize{
+   \item Fixed help Rd files to include link to package functions outside of this package.
+}
+}

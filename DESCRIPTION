@@ -1,8 +1,8 @@
 Package: glmnetcr
 Type: Package
 Title: Fit a Penalized Constrained Continuation Ratio Model for Predicting an Ordinal Response
-Version: 1.0.6
-Date: 2020-07-02
+Version: 1.0.7
+Date: 2025-04-09
 Author: Kellie J. Archer
 Maintainer: Kellie J. Archer <archer.43@osu.edu>
 Description: Penalized methods are useful for fitting over-parameterized models. This package includes functions for restructuring an ordinal

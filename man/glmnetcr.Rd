@@ -131,7 +131,7 @@ This function depends heavily upon the \code{glmnet} function in the \pkg{glmnet
 }
 
 \seealso{
-See Also as \code{\link{glmnet}}, \code{\link{select.glmnetcr}}, \code{\link{fitted.glmnetcr}}
+See Also as \code{\link[glmnet]{glmnet}}, \code{\link{select.glmnetcr}}, \code{\link{fitted.glmnetcr}}
 }
 \examples{
 data(diabetes)

@@ -1,20 +1,14 @@
-citHeader("To cite glmnetcr in publications use:")
-
-citEntry(entry = "Article",
+bibentry(
+  bibtype      = "Article",
   title        = "L1 Penalized Continuation Ratio Models for Ordinal Response Prediction Using High-dimensional Datasets",
-  author       = personList(as.person("Kellie J. Archer"), as.person("Andre A.A. Williams")),
+  author       = "Kellie J. Archer, Andre A.A. Williams",
   journal      = "Statistics in Medicine",
-  year         = "2012",
-  volume	   = "31",
-  pages        = "1464-1474",
-  url          = "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3718008/",
-
-  textVersion  =
-  paste("Kellie J. Archer, Andre A.A. Williams  (2012).",
-        "L1 Penalized Continuation Ratio Models for Ordinal Response Prediction Using High-dimensional Datasets.",
-        "Statistics in Medicine, 31:1464-1474.",
-        "URL https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3718008/.")
+  year         = 2012,
+  volume       = 31,
+  pages        = 1464-1474,
+  url          = "https://pmc.ncbi.nlm.nih.gov/articles/PMC3718008/",
 )
+
 
 
 

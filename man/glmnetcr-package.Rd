@@ -25,7 +25,7 @@ Archer K.J., Williams A.A.A. (2012) L1 penalized continuation ratio models for o
 \keyword{ classif }
 
 \seealso{
- See also \code{\link[glmnet:glmnet]{glmnet}} ~~
+ See also \code{\link[glmnet]{glmnet}} ~~
 }
 \examples{
 data(diabetes)

@@ -11080,7 +11080,7 @@ Pre-processed gene expression data from Gene Expression Omnibus Series GSE21321.
     \item{\code{ILMN_2415979}}{expression for the indicating Illumina probe}
   }
 }
-\source{\url{http://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE21321}}
+\source{\url{https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE21321}}
 \examples{
 data(diabetes)
 attach(diabetes)
